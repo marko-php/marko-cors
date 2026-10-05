@@ -14,6 +14,17 @@ readonly class CorsConfig
     ) {}
 
     /**
+     * Path patterns (no leading slash) CORS applies to; `*` matches any characters.
+     *
+     * @return array<string>
+     * @throws ConfigNotFoundException
+     */
+    public function paths(): array
+    {
+        return $this->config->getArray('cors.paths');
+    }
+
+    /**
      * @return array<string>
      * @throws ConfigNotFoundException
      */

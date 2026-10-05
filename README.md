@@ -10,18 +10,11 @@ composer require marko/cors
 
 ## Quick Example
 
-```php
-use Marko\Cors\Middleware\CorsMiddleware;
-use Marko\Routing\Attributes\Middleware;
+The middleware registers itself globally, so preflights and cross-origin responses are handled as soon as you allow an origin:
 
-#[Middleware(CorsMiddleware::class)]
-class PostController
-{
-    public function index(): Response
-    {
-        // CORS headers added automatically
-    }
-}
+```bash
+CORS_ALLOWED_ORIGINS=https://app.example.com
+CORS_PATHS=api/*
 ```
 
 ## Documentation

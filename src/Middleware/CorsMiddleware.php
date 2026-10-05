@@ -11,6 +11,17 @@ use Marko\Routing\Http\Request;
 use Marko\Routing\Http\Response;
 use Marko\Routing\Middleware\MiddlewareInterface;
 
+/**
+ * Registered as global middleware by marko/cors, so it runs on every request
+ * — including unmatched ones — and outermost of the framework's global
+ * middleware. It does nothing unless the request carries an allowed `Origin`
+ * and its path matches `cors.paths`.
+ *
+ * A preflight (`OPTIONS` with `Access-Control-Request-Method`) is answered
+ * here with a 204. Every other request continues down the pipeline and has
+ * the CORS headers added to whatever response comes back, error responses
+ * included.
+ */
 readonly class CorsMiddleware implements MiddlewareInterface
 {
     public function __construct(
@@ -26,7 +37,7 @@ readonly class CorsMiddleware implements MiddlewareInterface
     ): Response {
         $origin = $request->header('Origin');
 
-        if ($origin === null || !$this->isOriginAllowed($origin)) {
+        if ($origin === null || !$this->isPathCovered($request->path()) || !$this->isOriginAllowed($origin)) {
             return $next($request);
         }
 
@@ -34,37 +45,94 @@ readonly class CorsMiddleware implements MiddlewareInterface
             throw CorsException::wildcardWithCredentials();
         }
 
-        if ($request->method() === 'OPTIONS') {
-            $preflightHeaders = [
-                'Access-Control-Allow-Origin' => $origin,
-                'Access-Control-Allow-Methods' => implode(', ', $this->corsConfig->allowedMethods()),
-                'Access-Control-Allow-Headers' => implode(', ', $this->corsConfig->allowedHeaders()),
-                'Vary' => 'Origin',
-            ];
-
-            if ($this->corsConfig->maxAge() > 0) {
-                $preflightHeaders['Access-Control-Max-Age'] = (string) $this->corsConfig->maxAge();
-            }
-
-            return new Response(
-                body: '',
-                statusCode: 204,
-                headers: $preflightHeaders,
-            );
+        if ($this->isPreflight($request)) {
+            return $this->preflightResponse($origin);
         }
 
         /** @var Response $response */
         $response = $next($request);
         $corsHeaders = [
             'Access-Control-Allow-Origin' => $origin,
-            'Vary' => 'Origin',
+            'Vary' => $this->varyWithOrigin($response),
         ];
 
         if ($this->corsConfig->supportsCredentials()) {
             $corsHeaders['Access-Control-Allow-Credentials'] = 'true';
         }
 
+        $exposeHeaders = $this->corsConfig->exposeHeaders();
+
+        if ($exposeHeaders !== []) {
+            $corsHeaders['Access-Control-Expose-Headers'] = implode(', ', $exposeHeaders);
+        }
+
         return $response->withHeaders($corsHeaders);
+    }
+
+    private function isPreflight(
+        Request $request,
+    ): bool {
+        return $request->method() === 'OPTIONS'
+            && $request->header('Access-Control-Request-Method') !== null;
+    }
+
+    /**
+     * @throws ConfigNotFoundException
+     */
+    private function preflightResponse(
+        string $origin,
+    ): Response {
+        $headers = [
+            'Access-Control-Allow-Origin' => $origin,
+            'Access-Control-Allow-Methods' => implode(', ', $this->corsConfig->allowedMethods()),
+            'Access-Control-Allow-Headers' => implode(', ', $this->corsConfig->allowedHeaders()),
+            'Vary' => 'Origin',
+        ];
+
+        if ($this->corsConfig->supportsCredentials()) {
+            $headers['Access-Control-Allow-Credentials'] = 'true';
+        }
+
+        if ($this->corsConfig->maxAge() > 0) {
+            $headers['Access-Control-Max-Age'] = (string) $this->corsConfig->maxAge();
+        }
+
+        return new Response(
+            body: '',
+            statusCode: 204,
+            headers: $headers,
+        );
+    }
+
+    private function varyWithOrigin(
+        Response $response,
+    ): string {
+        $vary = $response->headers()['Vary'] ?? '';
+
+        if ($vary === '') {
+            return 'Origin';
+        }
+
+        $values = array_map(trim(...), explode(',', $vary));
+
+        return in_array('origin', array_map(strtolower(...), $values), true) ? $vary : "$vary, Origin";
+    }
+
+    /**
+     * @throws ConfigNotFoundException
+     */
+    private function isPathCovered(
+        string $path,
+    ): bool {
+        $path = ltrim($path, '/');
+
+        return array_any(
+            $this->corsConfig->paths(),
+            fn (string $pattern): bool => preg_match(
+                '#^' . str_replace('\*', '.*', preg_quote(ltrim($pattern, '/'), '#')) . '$#',
+                $path,
+            ) === 1,
+        );
     }
 
     /**

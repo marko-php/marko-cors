@@ -48,6 +48,7 @@ final class Helpers
      * @param list<string> $allowedMethods
      * @param list<string> $allowedHeaders
      * @param list<string> $exposeHeaders
+     * @param list<string> $paths
      */
     public static function createCorsConfig(
         array $allowedOrigins = ['https://example.com'],
@@ -56,8 +57,10 @@ final class Helpers
         array $exposeHeaders = [],
         bool $supportsCredentials = false,
         int $maxAge = 0,
+        array $paths = ['*'],
     ): CorsConfig {
         return new CorsConfig(new FakeConfigRepository([
+            'cors.paths' => $paths,
             'cors.allowed_origins' => $allowedOrigins,
             'cors.allowed_methods' => $allowedMethods,
             'cors.allowed_headers' => $allowedHeaders,

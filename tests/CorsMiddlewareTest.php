@@ -36,6 +36,7 @@ it('handles preflight OPTIONS requests with 204 No Content response', function (
 
     $request = new Request(server: [
         'REQUEST_METHOD' => 'OPTIONS',
+        'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
         'HTTP_ORIGIN' => 'https://example.com',
     ]);
 
@@ -82,7 +83,8 @@ it('reads CORS configuration from config/cors.php via CorsConfig', function (): 
         ->and($configFile)->toHaveKey('allowed_headers')
         ->and($configFile)->toHaveKey('expose_headers')
         ->and($configFile)->toHaveKey('supports_credentials')
-        ->and($configFile)->toHaveKey('max_age');
+        ->and($configFile)->toHaveKey('max_age')
+        ->and($configFile)->toHaveKey('paths');
 
     $config = new CorsConfig(new FakeConfigRepository([
         'cors.allowed_origins' => $configFile['allowed_origins'],
@@ -91,6 +93,7 @@ it('reads CORS configuration from config/cors.php via CorsConfig', function (): 
         'cors.expose_headers' => $configFile['expose_headers'],
         'cors.supports_credentials' => $configFile['supports_credentials'],
         'cors.max_age' => $configFile['max_age'],
+        'cors.paths' => $configFile['paths'],
     ]));
 
     expect($config->allowedOrigins())->toBe($configFile['allowed_origins'])
@@ -98,7 +101,8 @@ it('reads CORS configuration from config/cors.php via CorsConfig', function (): 
         ->and($config->allowedHeaders())->toBe($configFile['allowed_headers'])
         ->and($config->exposeHeaders())->toBe($configFile['expose_headers'])
         ->and($config->supportsCredentials())->toBe($configFile['supports_credentials'])
-        ->and($config->maxAge())->toBe($configFile['max_age']);
+        ->and($config->maxAge())->toBe($configFile['max_age'])
+        ->and($config->paths())->toBe($configFile['paths']);
 });
 
 it('supports wildcard star origin matching', function (): void {
@@ -144,6 +148,7 @@ it('sets Access-Control-Max-Age header for preflight caching', function (): void
 
     $request = new Request(server: [
         'REQUEST_METHOD' => 'OPTIONS',
+        'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
         'HTTP_ORIGIN' => 'https://example.com',
     ]);
 
@@ -182,6 +187,7 @@ it('adds a Vary: Origin header on the preflight OPTIONS response when the origin
 
     $request = new Request(server: [
         'REQUEST_METHOD' => 'OPTIONS',
+        'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
         'HTTP_ORIGIN' => 'https://example.com',
     ]);
 

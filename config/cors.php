@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    // Request paths CORS applies to, without the leading slash; `*` matches anything (including `/`).
+    'paths' => array_filter(explode(',', $_ENV['CORS_PATHS'] ?? '*')),
     'allowed_origins' => array_filter(explode(',', $_ENV['CORS_ALLOWED_ORIGINS'] ?? '')),
     'allowed_methods' => explode(',', $_ENV['CORS_ALLOWED_METHODS'] ?? 'GET,POST,PUT,PATCH,DELETE,OPTIONS'),
     'allowed_headers' => explode(',', $_ENV['CORS_ALLOWED_HEADERS'] ?? 'Content-Type,Authorization'),
