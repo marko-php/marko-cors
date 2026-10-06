@@ -7,21 +7,24 @@ namespace Marko\Cors\Middleware;
 use Marko\Config\Exceptions\ConfigNotFoundException;
 use Marko\Cors\Config\CorsConfig;
 use Marko\Cors\Exceptions\CorsException;
+use Marko\Routing\Attributes\RunsOnUnmatched;
 use Marko\Routing\Http\Request;
 use Marko\Routing\Http\Response;
 use Marko\Routing\Middleware\MiddlewareInterface;
 
 /**
  * Registered as global middleware by marko/cors, so it runs on every request
- * — including unmatched ones — and outermost of the framework's global
- * middleware. It does nothing unless the request carries an allowed `Origin`
- * and its path matches `cors.paths`.
+ * and outermost of the framework's global middleware. #[RunsOnUnmatched]
+ * keeps it running when no route matches: a preflight to a path without an
+ * explicit OPTIONS route is an unmatched request. It does nothing unless the
+ * request carries an allowed `Origin` and its path matches `cors.paths`.
  *
  * A preflight (`OPTIONS` with `Access-Control-Request-Method`) is answered
- * here with a 204. Every other request continues down the pipeline and has
- * the CORS headers added to whatever response comes back, error responses
- * included.
+ * here with a 204, whether or not a route exists for the path. Every other
+ * request continues down the pipeline and has the CORS headers added to
+ * whatever response comes back, error responses (404, 405) included.
  */
+#[RunsOnUnmatched]
 readonly class CorsMiddleware implements MiddlewareInterface
 {
     public function __construct(

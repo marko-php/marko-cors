@@ -6,6 +6,7 @@ use Marko\Core\Container\Container;
 use Marko\Core\Container\PreferenceRegistry;
 use Marko\Cors\Middleware\CorsMiddleware;
 use Marko\Cors\Tests\Helpers;
+use Marko\Routing\Attributes\RunsOnUnmatched;
 use Marko\Routing\Http\Request;
 use Marko\Routing\Http\Response;
 use Marko\Routing\RouteCollection;
@@ -201,5 +202,30 @@ describe('through the router', function (): void {
 
         expect($response->statusCode())->toBe(201)
             ->and($response->headers()['Access-Control-Allow-Origin'])->toBe('https://example.com');
+    });
+
+    it('answers a preflight to an unknown covered path with 204 and CORS headers', function (): void {
+        $response = corsRouter()->handle(corsRequest('OPTIONS', '/api/missing', [
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
+        ]));
+
+        expect($response->statusCode())->toBe(204)
+            ->and($response->headers()['Access-Control-Allow-Origin'])->toBe('https://example.com')
+            ->and($response->headers()['Access-Control-Allow-Methods'])->toBe('GET, POST');
+    });
+
+    it('adds CORS headers to a 404 for a non-preflight request to an unknown path', function (): void {
+        $response = corsRouter()->handle(corsRequest('GET', '/api/missing'));
+
+        expect($response->statusCode())->toBe(404)
+            ->and($response->headers()['Access-Control-Allow-Origin'])->toBe('https://example.com');
+    });
+});
+
+describe('unmatched requests', function (): void {
+    it('declares RunsOnUnmatched so preflights reach it when no route matches', function (): void {
+        $attributes = new ReflectionClass(CorsMiddleware::class)->getAttributes(RunsOnUnmatched::class);
+
+        expect($attributes)->toHaveCount(1);
     });
 });
