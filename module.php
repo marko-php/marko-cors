@@ -17,6 +17,7 @@ return [
             'marko/authentication-token',
             'marko/authorization',
             'marko/layout',
+            'marko/security',
         ],
     ],
     'globalMiddleware' => [
