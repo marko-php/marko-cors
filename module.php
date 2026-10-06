@@ -18,6 +18,7 @@ return [
             'marko/authorization',
             'marko/layout',
             'marko/security',
+            'marko/webhook',
         ],
     ],
     'globalMiddleware' => [
